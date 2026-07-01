@@ -585,7 +585,9 @@
     const sigEtnia = ficha.assinaturas?.etnia;
 
     // helpers ---------------------------------------------
-    const cb = (val, opt) => val === opt ? '☒' : '☐';
+    // Usamos ■ (quadrado preto) e □ (quadrado branco) — ambos do bloco Unicode
+    // "Geometric Shapes", que a fonte Roboto renderiza corretamente e distintamente.
+    const cb = (val, opt) => val === opt ? '■' : '□';
     const cbLine = (options, selected) => options.map(o => `${cb(selected, o)} ${o}`).join('   ');
     const val = (v) => v && String(v).trim() ? String(v) : ' ';
     const fmtDate = (isoDate) => {
@@ -682,9 +684,9 @@
         { text: dep ? val(dep.parentesco) : ' ', fontSize: 9 },
         { text: dep ? fmtDate(dep.nascimento) : ' ', fontSize: 9 },
         { text: dep ? val(dep.cpf) : ' ', fontSize: 9 },
-        { text: dep ? (dep.irrf ? '☒' : '☐') : '☐', fontSize: 10, alignment: 'center' },
-        { text: dep ? (dep.salFam ? '☒' : '☐') : '☐', fontSize: 10, alignment: 'center' },
-        { text: dep ? (dep.saude ? '☒' : '☐') : '☐', fontSize: 10, alignment: 'center' }
+        { text: dep ? (dep.irrf ? '■' : '□') : '□', fontSize: 10, alignment: 'center' },
+        { text: dep ? (dep.salFam ? '■' : '□') : '□', fontSize: 10, alignment: 'center' },
+        { text: dep ? (dep.saude ? '■' : '□') : '□', fontSize: 10, alignment: 'center' }
       ]);
     }
     const dependentesTable = {
@@ -770,7 +772,7 @@
       'Cartão de vacinação atualizado',
       'Declaração de Etnia assinada (Lei 14.553/2023)'
     ];
-    const checklistDocs = { ul: docList.map(t => ({ text: '☐  ' + t, fontSize: 9, margin: [0, 1, 0, 1] })), type: 'none', margin: [0, 4, 0, 0] };
+    const checklistDocs = { ul: docList.map(t => ({ text: '□  ' + t, fontSize: 9, margin: [0, 1, 0, 1] })), type: 'none', margin: [0, 4, 0, 0] };
 
     // ─────────────────────────────────────────────────────
     // Section 14: DECLARAÇÕES
@@ -919,7 +921,7 @@
         ]),
 
         banner('7. DEPENDENTES (para IRRF, salário-família e plano de saúde)'),
-        { text: 'Marque com ☒ a finalidade da dependência. Anexar certidão de nascimento / CPF dos dependentes.', italics: true, color: '#595959', fontSize: 8, margin: [0, 0, 0, 4] },
+        { text: 'Marque com ■ a finalidade da dependência. Anexar certidão de nascimento / CPF dos dependentes.', italics: true, color: '#595959', fontSize: 8, margin: [0, 0, 0, 4] },
         dependentesTable,
 
         banner('8. ESCOLARIDADE E QUALIFICAÇÃO'),
