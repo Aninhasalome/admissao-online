@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#C00000">
+<title>Admissões — Painel RH</title>
+<style>
+  :root {
+    --primary: #C00000;
+    --primary-dark: #8B0000;
+    --gray-100: #F5F5F5;
+    --gray-200: #E7E6E6;
+    --gray-300: #D0D0D0;
+    --gray-500: #808080;
+    --gray-700: #4A4A4A;
+    --gray-900: #1A1A1A;
+    --success: #2E7D32;
+    --warn: #F57C00;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--gray-100); color: var(--gray-900); font-size: 15px; line-height: 1.5; }
+
+  header.app-header { background: var(--primary); color: white; padding: 16px 20px; }
+  header .inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+  .container { max-width: 1100px; margin: 20px auto; padding: 0 16px 40px; }
+
+  /* KPIs */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi { background: white; padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary); }
+  .kpi .n { font-size: 24px; font-weight: 700; color: var(--primary); }
+  .kpi .l { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .kpi.warn { border-left-color: var(--warn); } .kpi.warn .n { color: var(--warn); }
+  .kpi.success { border-left-color: var(--success); } .kpi.success .n { color: var(--success); }
+
+  /* toolbar */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 10px 18px; font-size: 14px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: white; color: var(--gray-700); border: 1.5px solid var(--gray-300); }
+  .btn-icon { padding: 8px 12px; }
+  .filter-group { display: flex; gap: 6px; margin-left: auto; align-items: center; flex-wrap: wrap; }
+  .filter-group select { padding: 8px 12px; border: 1.5px solid var(--gray-300); border-radius: 6px; font-family: inherit; font-size: 14px; background: white; }
+  .filter-group input { padding: 8px 12px; border: 1.5px solid var(--gray-300); border-radius: 6px; font-family: inherit; font-size: 14px; }
+
+  /* table */
+  .table-wrapper { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; background: var(--gray-100); padding: 12px 16px; font-size: 12px; text-transform: uppercase; color: var(--gray-500); letter-spacing: 0.5px; border-bottom: 2px solid var(--gray-200); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--gray-200); font-size: 14px; }
+  tr:hover td { background: var(--gray-100); cursor: pointer; }
+  tr.empty td { text-align: center; padding: 40px; color: var(--gray-500); }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .badge.pendente { background: #E3F2FD; color: #1565C0; }
+  .badge.rascunho { background: #FFF8E1; color: var(--warn); }
+  .badge.enviada { background: #E8F5E9; color: var(--success); }
+  .badge.empresa-agas { background: #FCE4EC; color: var(--primary); }
+  .badge.empresa-eugas { background: #E1F5FE; color: #0277BD; }
+
+  /* modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 12px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h2 { margin: 0; font-size: 18px; }
+  .modal-close { background: none; border: none; font-size: 24px; color: var(--gray-500); cursor: pointer; line-height: 1; padding: 0 4px; }
+  .modal-body { padding: 20px; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--gray-200); display: flex; gap: 8px; justify-content: flex-end; }
+  .modal.wide { max-width: 800px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+  .field input, .field select { width: 100%; padding: 10px 12px; font-size: 15px; border: 1.5px solid var(--gray-300); border-radius: 6px; font-family: inherit; }
+
+  .link-box { background: var(--gray-100); border: 1.5px dashed var(--gray-300); border-radius: 6px; padding: 12px; margin: 12px 0; word-break: break-all; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; color: var(--gray-700); }
+  .link-actions { display: flex; gap: 8px; }
+  .link-actions .btn { flex: 1; }
+
+  /* detail modal - sections */
+  .detail-empresa-badge { padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-weight: 600; }
+  .detail-empresa-badge.agas { background: #FCE4EC; color: var(--primary); }
+  .detail-empresa-badge.eugas { background: #E1F5FE; color: #0277BD; }
+  .detail-section { margin-bottom: 16px; }
+  .detail-section h3 { margin: 0 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--primary); color: var(--primary); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 4px 12px; font-size: 14px; }
+  .detail-grid .k { color: var(--gray-500); padding: 4px 0; }
+  .detail-grid .v { padding: 4px 0; font-weight: 500; word-break: break-word; }
+  .sig-preview { border: 1.5px solid var(--gray-300); border-radius: 6px; background: white; padding: 8px; margin-top: 8px; }
+  .sig-preview img { max-width: 100%; display: block; }
+
+  .config-warning { background: #FFF3E0; border-left: 4px solid var(--warn); padding: 12px 16px; margin-bottom: 20px; border-radius: 0 6px 6px 0; font-size: 14px; }
+  .config-warning strong { display: block; color: var(--warn); margin-bottom: 4px; }
+
+  /* loader */
+  .loader-inline { text-align: center; padding: 40px; color: var(--gray-500); }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="inner">
+    <div>
+      <h1>Admissões — Painel RH</h1>
+      <div class="subtitle">Agás Gases &amp; Eugas Comércio de Gases</div>
+    </div>
+    <button class="btn btn-secondary" id="btn-nova">＋ Nova ficha</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="config-warning-box"></div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n" id="kpi-total">0</div><div class="l">Total de fichas</div></div>
+    <div class="kpi warn"><div class="n" id="kpi-pendente">0</div><div class="l">Pendentes (link enviado)</div></div>
+    <div class="kpi warn"><div class="n" id="kpi-rascunho">0</div><div class="l">Rascunhos</div></div>
+    <div class="kpi success"><div class="n" id="kpi-enviada">0</div><div class="l">Enviadas</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="filter-group">
+      <input type="search" id="filter-search" placeholder="Buscar por nome…">
+      <select id="filter-empresa">
+        <option value="">Todas as empresas</option>
+        <option value="agas">Agás</option>
+        <option value="eugas">Eugas</option>
+      </select>
+      <select id="filter-status">
+        <option value="">Todos os status</option>
+        <option value="pendente">Pendente</option>
+        <option value="rascunho">Rascunho</option>
+        <option value="enviada">Enviada</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Candidato</th>
+          <th>Criado em</th>
+          <th>Última atualização</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="fichas-tbody">
+        <tr class="empty"><td colspan="6"><div class="loader-inline">Carregando…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Nova Ficha ═══ -->
+<div class="modal-overlay" id="modal-nova">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Nova ficha de admissão</h2>
+      <button class="modal-close" data-close>×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Empresa *</label>
+        <select id="nova-empresa">
+          <option value="agas">AGÁS GASES LTDA</option>
+          <option value="eugas">EUGAS COMÉRCIO DE GASES EIRELI</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nome do candidato (opcional)</label>
+        <input type="text" id="nova-nome" placeholder="Ajuda a identificar depois">
+      </div>
+      <div class="field">
+        <label>Telefone / WhatsApp do candidato (opcional)</label>
+        <input type="tel" id="nova-tel" placeholder="(37) 90000-0000">
+      </div>
+      <div id="nova-link-container" style="display:none">
+        <hr style="border:none;border-top:1px solid var(--gray-200);margin:20px 0">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:var(--success)">✓ Link gerado! Envie para o candidato:</p>
+        <div class="link-box" id="nova-link"></div>
+        <div class="link-actions">
+          <button class="btn btn-secondary" id="btn-copy">📋 Copiar link</button>
+          <a class="btn btn-secondary" id="btn-whats" target="_blank">💬 Abrir WhatsApp</a>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close>Fechar</button>
+      <button class="btn btn-primary" id="btn-gerar">Gerar link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Detalhe da Ficha ═══ -->
+<div class="modal-overlay" id="modal-detalhe">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h2>Detalhes da ficha</h2>
+      <button class="modal-close" data-close>×</button>
+    </div>
+    <div class="modal-body" id="detalhe-body">
+      <div class="loader-inline">Carregando…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btn-copiar-link">📋 Copiar link do candidato</button>
+      <button class="btn btn-secondary" data-close>Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ═══════════════════════════════════════════════════════════════════
+  //  CONFIGURAÇÃO — Ana Paula, MESMOS dados que você colocou no index.html
+  // ═══════════════════════════════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey: "AIzaSyB2fpZIidz41B3vrDoZy3K79vs31Uhw4C4",
+    authDomain: "admissao-agas-eugas.firebaseapp.com",
+    projectId: "admissao-agas-eugas",
+    storageBucket: "admissao-agas-eugas.firebasestorage.app",
+    messagingSenderId: "407216149561",
+    appId: "1:407216149561:web:71454d4744c22a76dc69e8"
+  };
+  const USE_FIREBASE = !!firebaseConfig.projectId;
+
+  const EMPRESAS = {
+    agas: { nome: "AGÁS GASES LTDA", label: "Agás" },
+    eugas: { nome: "EUGAS COMÉRCIO DE GASES EIRELI", label: "Eugas" }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  Firebase (dinâmico)
+  // ═══════════════════════════════════════════════════════════════════
+  let db = null, fs = null;
+  if (USE_FIREBASE) {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    fs = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
+    const app = initializeApp(firebaseConfig);
+    db = fs.getFirestore(app);
+  } else {
+    document.getElementById('config-warning-box').innerHTML = `
+      <div class="config-warning">
+        <strong>Firebase não configurado</strong>
+        Você precisa colocar as credenciais do seu projeto Firebase no topo do arquivo <code>admin.html</code> (e do <code>index.html</code>). Leia o <code>README.md</code> pra saber como.
+        Sem isso, o painel funciona só localmente (não sincroniza entre dispositivos).
+      </div>
+    `;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  ESTADO
+  // ═══════════════════════════════════════════════════════════════════
+  let fichas = [];
+  let currentDetail = null;
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  CARREGAR FICHAS
+  // ═══════════════════════════════════════════════════════════════════
+  async function loadFichas() {
+    if (USE_FIREBASE) {
+      try {
+        const q = fs.query(fs.collection(db, 'fichas'), fs.orderBy('criadoEm', 'desc'));
+        const snap = await fs.getDocs(q);
+        fichas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch(e) {
+        console.error('Erro ao carregar fichas:', e);
+        alert('Erro ao carregar fichas do Firestore. Veja o console.');
+      }
+    } else {
+      // Fallback: mostra fichas do localStorage (só do mesmo navegador)
+      fichas = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('ficha_')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            fichas.push({ id: key.replace('ficha_', ''), ...data });
+          } catch(e){}
+        }
+      }
+    }
+    render();
+  }
+
+  function render() {
+    // KPIs
+    document.getElementById('kpi-total').textContent = fichas.length;
+    document.getElementById('kpi-pendente').textContent = fichas.filter(f => f.statusFicha === 'pendente' || !f.statusFicha).length;
+    document.getElementById('kpi-rascunho').textContent = fichas.filter(f => f.statusFicha === 'rascunho').length;
+    document.getElementById('kpi-enviada').textContent = fichas.filter(f => f.statusFicha === 'enviada').length;
+
+    // Filtros
+    const empFilter = document.getElementById('filter-empresa').value;
+    const statusFilter = document.getElementById('filter-status').value;
+    const search = document.getElementById('filter-search').value.toLowerCase().trim();
+
+    let filtered = fichas;
+    if (empFilter) filtered = filtered.filter(f => f.empresa === empFilter);
+    if (statusFilter) filtered = filtered.filter(f => (f.statusFicha || 'pendente') === statusFilter);
+    if (search) filtered = filtered.filter(f => {
+      const nome = (f.dados?.nomeCompleto || f.candidato?.nome || '').toLowerCase();
+      return nome.includes(search);
+    });
+
+    const tbody = document.getElementById('fichas-tbody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr class="empty"><td colspan="6">Nenhuma ficha encontrada.<br><small>Clique em "＋ Nova ficha" no topo para começar.</small></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(f => {
+      const emp = f.empresa || 'agas';
+      const status = f.statusFicha || 'pendente';
+      const nome = f.dados?.nomeCompleto || f.candidato?.nome || '(sem nome)';
+      const criado = formatDate(f.criadoEm);
+      const atualizado = formatDate(f.atualizadoEm);
+      return `
+        <tr data-id="${f.id}">
+          <td><span class="badge empresa-${emp}">${EMPRESAS[emp]?.label || emp}</span></td>
+          <td>${escapeHtml(nome)}</td>
+          <td>${criado}</td>
+          <td>${atualizado}</td>
+          <td><span class="badge ${status}">${status}</span></td>
+          <td><button class="btn btn-secondary btn-icon" data-view="${f.id}">Ver</button></td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('[data-view]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDetalhe(btn.dataset.view);
+      });
+    });
+    tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => openDetalhe(tr.dataset.id));
+    });
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '—';
+    let d;
+    if (typeof ts === 'string') d = new Date(ts);
+    else if (ts.toDate) d = ts.toDate(); // Firestore Timestamp
+    else if (ts.seconds) d = new Date(ts.seconds * 1000);
+    else return '—';
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function escapeHtml(s) {
+    return (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  NOVA FICHA
+  // ═══════════════════════════════════════════════════════════════════
+  const modalNova = document.getElementById('modal-nova');
+  document.getElementById('btn-nova').addEventListener('click', () => {
+    document.getElementById('nova-nome').value = '';
+    document.getElementById('nova-tel').value = '';
+    document.getElementById('nova-empresa').value = 'agas';
+    document.getElementById('nova-link-container').style.display = 'none';
+    document.getElementById('btn-gerar').style.display = '';
+    modalNova.classList.add('show');
+  });
+
+  document.getElementById('btn-gerar').addEventListener('click', async () => {
+    const empresa = document.getElementById('nova-empresa').value;
+    const nome = document.getElementById('nova-nome').value.trim();
+    const tel = document.getElementById('nova-tel').value.trim();
+    const id = generateId();
+
+    const payload = {
+      empresa,
+      statusFicha: 'pendente',
+      candidato: { nome, telefone: tel },
+      criadoEm: USE_FIREBASE ? fs.serverTimestamp() : new Date().toISOString(),
+      atualizadoEm: USE_FIREBASE ? fs.serverTimestamp() : new Date().toISOString()
+    };
+
+    if (USE_FIREBASE) {
+      try {
+        await fs.setDoc(fs.doc(db, 'fichas', id), payload);
+      } catch(e) {
+        console.error(e);
+        alert('Erro ao criar ficha no Firestore.');
+        return;
+      }
+    } else {
+      localStorage.setItem('ficha_' + id, JSON.stringify(payload));
+    }
+
+    // Monta link
+    const baseUrl = location.href.replace(/admin\.html.*$/, '');
+    const link = `${baseUrl}?id=${id}&empresa=${empresa}`;
+    document.getElementById('nova-link').textContent = link;
+    document.getElementById('nova-link-container').style.display = '';
+    document.getElementById('btn-gerar').style.display = 'none';
+
+    // WhatsApp
+    const msg = encodeURIComponent(`Olá${nome ? ', ' + nome : ''}! Você foi convidado(a) para preencher a ficha de admissão da ${EMPRESAS[empresa].nome}. Basta abrir o link e preencher pelo celular:\n\n${link}`);
+    const whatsUrl = tel
+      ? `https://wa.me/55${tel.replace(/\D/g, '')}?text=${msg}`
+      : `https://wa.me/?text=${msg}`;
+    document.getElementById('btn-whats').href = whatsUrl;
+
+    await loadFichas();
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    const link = document.getElementById('nova-link').textContent;
+    navigator.clipboard.writeText(link).then(() => {
+      const btn = document.getElementById('btn-copy');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  });
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  DETALHE DA FICHA
+  // ═══════════════════════════════════════════════════════════════════
+  const modalDetalhe = document.getElementById('modal-detalhe');
+  async function openDetalhe(id) {
+    modalDetalhe.classList.add('show');
+    document.getElementById('detalhe-body').innerHTML = '<div class="loader-inline">Carregando…</div>';
+    let ficha;
+    if (USE_FIREBASE) {
+      const snap = await fs.getDoc(fs.doc(db, 'fichas', id));
+      ficha = snap.exists() ? { id, ...snap.data() } : null;
+    } else {
+      const raw = localStorage.getItem('ficha_' + id);
+      ficha = raw ? { id, ...JSON.parse(raw) } : null;
+    }
+    if (!ficha) {
+      document.getElementById('detalhe-body').innerHTML = '<p>Ficha não encontrada.</p>';
+      return;
+    }
+    currentDetail = ficha;
+    renderDetalhe(ficha);
+  }
+
+  function renderDetalhe(f) {
+    const emp = f.empresa || 'agas';
+    const d = f.dados || {};
+    const deps = d.dependentes || [];
+
+    const html = `
+      <div class="detail-empresa-badge ${emp}">${EMPRESAS[emp].nome} — Status: <strong>${f.statusFicha || 'pendente'}</strong></div>
+
+      ${f.candidato?.nome ? `<div class="detail-section"><h3>Cadastro inicial (RH)</h3><div class="detail-grid">
+        <div class="k">Nome informado</div><div class="v">${escapeHtml(f.candidato.nome)}</div>
+        <div class="k">Telefone</div><div class="v">${escapeHtml(f.candidato.telefone || '—')}</div>
+        <div class="k">Criado em</div><div class="v">${formatDate(f.criadoEm)}</div>
+      </div></div>` : ''}
+
+      <div class="detail-section"><h3>Dados pessoais</h3><div class="detail-grid">
+        ${detailRow('Nome completo', d.nomeCompleto)}
+        ${detailRow('Nome social', d.nomeSocial)}
+        ${detailRow('Data de nascimento', d.dataNascimento)}
+        ${detailRow('Naturalidade', d.naturalidade)}
+        ${detailRow('Nacionalidade', d.nacionalidade)}
+        ${detailRow('Sexo', d.sexo)}
+        ${detailRow('Raça/Cor', d.raca)}
+        ${detailRow('Estado civil', d.estCivil)}
+        ${detailRow('PcD', d.pcd + (d.pcdQual ? ' — ' + d.pcdQual : ''))}
+      </div></div>
+
+      <div class="detail-section"><h3>Filiação, endereço e contato</h3><div class="detail-grid">
+        ${detailRow('Nome do pai', d.nomePai)}
+        ${detailRow('Nome da mãe', d.nomeMae)}
+        ${detailRow('Endereço', d.endereco)}
+        ${detailRow('Bairro', d.bairro)}
+        ${detailRow('CEP', d.cep)}
+        ${detailRow('Cidade/UF', (d.cidade || '') + '/' + (d.uf || ''))}
+        ${detailRow('Celular', d.celular)}
+        ${detailRow('E-mail', d.email)}
+        ${detailRow('WhatsApp', d.whats + (d.whatsOutro ? ' — ' + d.whatsOutro : ''))}
+      </div></div>
+
+      <div class="detail-section"><h3>Documentação</h3><div class="detail-grid">
+        ${detailRow('CPF', d.cpf)}
+        ${detailRow('RG', d.rg + (d.rgOrgao ? ' ' + d.rgOrgao : '') + (d.rgData ? ' (' + d.rgData + ')' : ''))}
+        ${detailRow('CTPS', d.ctpsNumero + ' ' + (d.ctpsData || ''))}
+        ${detailRow('PIS/PASEP/NIT', d.pis)}
+        ${detailRow('Título eleitor', d.titulo + (d.zonaSecao ? ' — ' + d.zonaSecao : ''))}
+        ${detailRow('Reservista', d.reservista)}
+        ${detailRow('CNH', (d.cnhNumero || '') + ' ' + (d.cnhCategoria || '') + (d.cnhValidade ? ' (val. ' + d.cnhValidade + ')' : ''))}
+        ${detailRow('MOPP', d.mopp + (d.moppValidade ? ' — val. ' + d.moppValidade : ''))}
+      </div></div>
+
+      ${deps.length ? `<div class="detail-section"><h3>Dependentes (${deps.length})</h3>${
+        deps.map((dep, i) => `
+          <div style="background:white;padding:10px;border-radius:6px;margin-bottom:8px;font-size:13px;border:1px solid var(--gray-200)">
+            <strong>#${i+1} ${escapeHtml(dep.nome || '(sem nome)')}</strong> — ${escapeHtml(dep.parentesco || '')}<br>
+            <small>Nasc: ${dep.nascimento || '—'} · CPF: ${dep.cpf || '—'}</small><br>
+            <small>${dep.irrf ? '✓ IRRF ' : ''}${dep.salFam ? '✓ Sal-Fam ' : ''}${dep.saude ? '✓ Saúde' : ''}</small>
+          </div>
+        `).join('')
+      }</div>` : ''}
+
+      <div class="detail-section"><h3>Escolaridade e complementares</h3><div class="detail-grid">
+        ${detailRow('Grau de instrução', d.instrucao)}
+        ${detailRow('Curso', d.curso)}
+        ${detailRow('Instituição', d.instituicao)}
+        ${detailRow('Ano conclusão', d.anoConclusao)}
+        ${detailRow('Vale-transporte', d.vt)}
+        ${detailRow('Contato emergência', (d.emerNome || '') + ' (' + (d.emerParentesco || '') + ') ' + (d.emerTelefone || ''))}
+      </div></div>
+
+      <div class="detail-section"><h3>Saúde</h3><div class="detail-grid">
+        ${detailRow('Alergias', d.alergia + (d.alergiaQual ? ' — ' + d.alergiaQual : ''))}
+        ${detailRow('Uso contínuo medicamento', d.medcont + (d.medContQual ? ' — ' + d.medContQual : ''))}
+        ${detailRow('Restrição médica', d.restr + (d.restrQual ? ' — ' + d.restrQual : ''))}
+      </div></div>
+
+      <div class="detail-section"><h3>Declaração de Etnia — Lei 14.553/2023</h3><div class="detail-grid">
+        ${detailRow('Autodeclaração', d.etnia)}
+      </div>
+      ${f.assinaturas?.etnia ? `<div class="sig-preview"><img src="${f.assinaturas.etnia}" alt="Assinatura"></div>` : '<p style="color:var(--gray-500);font-size:13px">Sem assinatura registrada.</p>'}
+      </div>
+
+      <div class="detail-section"><h3>Assinatura final</h3>
+      ${f.assinaturas?.final ? `<div class="sig-preview"><img src="${f.assinaturas.final}" alt="Assinatura"></div>` : '<p style="color:var(--gray-500);font-size:13px">Sem assinatura final registrada.</p>'}
+      </div>
+
+      ${f.statusFicha === 'enviada' ? `<div style="background:#E8F5E9;border-left:4px solid var(--success);padding:12px 16px;border-radius:0 6px 6px 0;font-size:14px;margin-top:16px">
+        <strong style="color:var(--success)">✓ Ficha enviada em ${formatDate(f.enviadoEm)}</strong><br>
+        <small>Na próxima fase do projeto, você vai poder baixar o PDF preenchido e mandar para a Contabilidade daqui mesmo.</small>
+      </div>` : ''}
+    `;
+    document.getElementById('detalhe-body').innerHTML = html;
+  }
+
+  function detailRow(k, v) {
+    v = (v == null || v === '' || v === 'undefined') ? '' : String(v).trim();
+    if (v === '/' || v === '— ') v = '';
+    return `<div class="k">${k}</div><div class="v" style="${v ? '' : 'color:var(--gray-500);font-style:italic'}">${escapeHtml(v || '(vazio)')}</div>`;
+  }
+
+  document.getElementById('btn-copiar-link').addEventListener('click', () => {
+    if (!currentDetail) return;
+    const baseUrl = location.href.replace(/admin\.html.*$/, '');
+    const link = `${baseUrl}?id=${currentDetail.id}&empresa=${currentDetail.empresa || 'agas'}`;
+    navigator.clipboard.writeText(link).then(() => {
+      const btn = document.getElementById('btn-copiar-link');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  });
+
+  // Modal close
+  document.querySelectorAll('[data-close]').forEach(el => {
+    el.addEventListener('click', () => {
+      el.closest('.modal-overlay').classList.remove('show');
+    });
+  });
+  document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) ov.classList.remove('show');
+    });
+  });
+
+  // Filtros
+  ['filter-empresa', 'filter-status'].forEach(id => {
+    document.getElementById(id).addEventListener('change', render);
+  });
+  document.getElementById('filter-search').addEventListener('input', render);
+
+  loadFichas();
+</script>
+
+</body>
+</html>
