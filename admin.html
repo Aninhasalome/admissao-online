@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#C00000">
 <title>Admissões — Painel RH</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.js"></script>
 <style>
   :root {
     --primary: #C00000;
@@ -211,6 +213,7 @@
       <div class="loader-inline">Carregando…</div>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-primary" id="btn-baixar-pdf" style="display:none">📥 Baixar PDF preenchido</button>
       <button class="btn btn-secondary" id="btn-copiar-link">📋 Copiar link do candidato</button>
       <button class="btn btn-secondary" data-close>Fechar</button>
     </div>
@@ -232,8 +235,22 @@
   const USE_FIREBASE = !!firebaseConfig.projectId;
 
   const EMPRESAS = {
-    agas: { nome: "AGÁS GASES LTDA", label: "Agás" },
-    eugas: { nome: "EUGAS COMÉRCIO DE GASES EIRELI", label: "Eugas" }
+    agas: {
+      nome: "AGÁS GASES LTDA",
+      label: "Agás",
+      cnpj: "04.680.175/0001-48",
+      endereco: "Av. São João, 3462 — Centro",
+      cep: "35680-065",
+      cidadeUF: "Itaúna/MG"
+    },
+    eugas: {
+      nome: "EUGAS COMÉRCIO DE GASES EIRELI",
+      label: "Eugas",
+      cnpj: "38.300.933/0001-77",
+      endereco: "Av. São João, 4613 — Lourdes",
+      cep: "35680-237",
+      cidadeUF: "Itaúna/MG"
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════════
@@ -450,6 +467,8 @@
     }
     currentDetail = ficha;
     renderDetalhe(ficha);
+    // Mostra botão de PDF só quando ficha está enviada
+    document.getElementById('btn-baixar-pdf').style.display = (ficha.statusFicha === 'enviada') ? '' : 'none';
   }
 
   function renderDetalhe(f) {
@@ -524,6 +543,7 @@
         ${detailRow('Alergias', d.alergia + (d.alergiaQual ? ' — ' + d.alergiaQual : ''))}
         ${detailRow('Uso contínuo medicamento', d.medcont + (d.medContQual ? ' — ' + d.medContQual : ''))}
         ${detailRow('Restrição médica', d.restr + (d.restrQual ? ' — ' + d.restrQual : ''))}
+        ${detailRow('Acidente de trabalho anterior', d.acidente + (d.acidenteQual ? ' — ' + d.acidenteQual : ''))}
       </div></div>
 
       <div class="detail-section"><h3>Declaração de Etnia — Lei 14.553/2023</h3><div class="detail-grid">
@@ -548,6 +568,396 @@
     v = (v == null || v === '' || v === 'undefined') ? '' : String(v).trim();
     if (v === '/' || v === '— ') v = '';
     return `<div class="k">${k}</div><div class="v" style="${v ? '' : 'color:var(--gray-500);font-style:italic'}">${escapeHtml(v || '(vazio)')}</div>`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  GERAÇÃO DE PDF (padrão idêntico à ficha impressa)
+  // ═══════════════════════════════════════════════════════════════════
+  document.getElementById('btn-baixar-pdf').addEventListener('click', () => {
+    if (!currentDetail) return;
+    generatePDF(currentDetail);
+  });
+
+  function generatePDF(ficha) {
+    const d = ficha.dados || {};
+    const emp = EMPRESAS[ficha.empresa || 'agas'];
+    const sigFinal = ficha.assinaturas?.final;
+    const sigEtnia = ficha.assinaturas?.etnia;
+
+    // helpers ---------------------------------------------
+    const cb = (val, opt) => val === opt ? '☒' : '☐';
+    const cbLine = (options, selected) => options.map(o => `${cb(selected, o)} ${o}`).join('   ');
+    const val = (v) => v && String(v).trim() ? String(v) : ' ';
+    const fmtDate = (isoDate) => {
+      if (!isoDate || typeof isoDate !== 'string') return ' ';
+      const [y, m, dd] = isoDate.split('-');
+      if (!y || !m || !dd) return isoDate;
+      return `${dd}/${m}/${y}`;
+    };
+
+    // border layouts ---------------------------------------
+    const grayBorder = {
+      hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+      hLineColor: () => '#808080', vLineColor: () => '#808080',
+      paddingLeft: () => 4, paddingRight: () => 4,
+      paddingTop: () => 3, paddingBottom: () => 3
+    };
+    const noBorder = {
+      hLineWidth: () => 0, vLineWidth: () => 0,
+      paddingLeft: () => 0, paddingRight: () => 0,
+      paddingTop: () => 0, paddingBottom: () => 0
+    };
+
+    // building blocks --------------------------------------
+    const banner = (text) => ({
+      table: { widths: ['*'], body: [[{ text, color: 'white', bold: true, fontSize: 10, fillColor: '#C00000', margin: [6, 4, 6, 4] }]] },
+      layout: noBorder,
+      margin: [0, 10, 0, 3]
+    });
+
+    const label = (text) => ({ text, fillColor: '#E7E6E6', bold: true, fontSize: 8 });
+    const valb  = (text) => ({ text: val(text), bold: true, fontSize: 10 });
+
+    // row com 2 pares (label|value|label|value)
+    const row2 = (l1, v1, l2, v2) => [label(l1), valb(v1), label(l2), valb(v2)];
+    // row com 1 campo full (spans 3 cells)
+    const row1 = (l, v) => [label(l), { text: val(v), colSpan: 3, bold: true, fontSize: 10 }, {}, {}];
+
+    // table wrapper 4-col
+    const t4 = (rows) => ({
+      table: { widths: [90, '*', 90, '*'], body: rows },
+      layout: grayBorder
+    });
+
+    // ─────────────────────────────────────────────────────
+    // Section 2: DADOS PESSOAIS - has special multi-line rows
+    // ─────────────────────────────────────────────────────
+    const dadosPessoais = {
+      table: {
+        widths: [90, '*', 90, '*'],
+        body: [
+          row1('Nome completo', d.nomeCompleto),
+          row2('Nome social', d.nomeSocial, 'Como prefere ser chamado', d.comoPrefere),
+          row2('Data de nascimento', fmtDate(d.dataNascimento), 'Naturalidade', d.naturalidade),
+          row2('Nacionalidade', d.nacionalidade, 'País de origem (se estrangeiro)', d.paisOrigem),
+          // Sexo + Raça/Cor
+          [
+            label('Sexo'),
+            { text: `${cb(d.sexo, 'Masculino')} Masculino   ${cb(d.sexo, 'Feminino')} Feminino`, fontSize: 9 },
+            label('Raça/Cor (IBGE)'),
+            { text: `${cb(d.raca, 'Branca')} Branca   ${cb(d.raca, 'Preta')} Preta\n${cb(d.raca, 'Parda')} Parda   ${cb(d.raca, 'Amarela')} Amarela\n${cb(d.raca, 'Indígena')} Indígena   ${cb(d.raca, 'Não declarada')} Não declarada`, fontSize: 9 }
+          ],
+          // Estado civil + PcD
+          [
+            label('Estado civil'),
+            { text: `${cb(d.estCivil, 'Solteiro(a)')} Solteiro(a)   ${cb(d.estCivil, 'Casado(a)')} Casado(a)\n${cb(d.estCivil, 'União estável')} União estável   ${cb(d.estCivil, 'Divorciado(a)')} Divorciado(a)\n${cb(d.estCivil, 'Viúvo(a)')} Viúvo(a)   ${cb(d.estCivil, 'Separado(a)')} Separado(a)`, fontSize: 9 },
+            label('PcD?'),
+            { text: `${cb(d.pcd, 'Não')} Não   ${cb(d.pcd, 'Sim')} Sim — qual: ${val(d.pcdQual)}`, fontSize: 9 }
+          ]
+        ]
+      },
+      layout: grayBorder
+    };
+
+    // ─────────────────────────────────────────────────────
+    // Section 7: DEPENDENTES
+    // ─────────────────────────────────────────────────────
+    const deps = d.dependentes || [];
+    const depRows = [
+      [
+        { text: 'Nome completo', ...label('Nome completo') },
+        { text: 'Parentesco', ...label('Parentesco') },
+        { text: 'Data nasc.', ...label('Data nasc.') },
+        { text: 'CPF', ...label('CPF') },
+        { text: 'IRRF', ...label('IRRF') },
+        { text: 'Sal-fam', ...label('Sal-fam') },
+        { text: 'Saúde', ...label('Saúde') }
+      ]
+    ];
+    // preencher 5 linhas (com dados dos dependentes ou em branco)
+    for (let i = 0; i < 5; i++) {
+      const dep = deps[i];
+      depRows.push([
+        { text: dep ? val(dep.nome) : ' ', fontSize: 9 },
+        { text: dep ? val(dep.parentesco) : ' ', fontSize: 9 },
+        { text: dep ? fmtDate(dep.nascimento) : ' ', fontSize: 9 },
+        { text: dep ? val(dep.cpf) : ' ', fontSize: 9 },
+        { text: dep ? (dep.irrf ? '☒' : '☐') : '☐', fontSize: 10, alignment: 'center' },
+        { text: dep ? (dep.salFam ? '☒' : '☐') : '☐', fontSize: 10, alignment: 'center' },
+        { text: dep ? (dep.saude ? '☒' : '☐') : '☐', fontSize: 10, alignment: 'center' }
+      ]);
+    }
+    const dependentesTable = {
+      table: { widths: ['*', 60, 55, 65, 30, 30, 30], body: depRows },
+      layout: grayBorder
+    };
+
+    // ─────────────────────────────────────────────────────
+    // Section 8: ESCOLARIDADE
+    // ─────────────────────────────────────────────────────
+    const gi = d.instrucao || '';
+    const escolaridade = {
+      table: {
+        widths: [90, '*', 90, '*'],
+        body: [
+          [
+            label('Grau de instrução'),
+            { text: `${cb(gi, 'Analfabeto')} Analfabeto   ${cb(gi, 'Fundamental incompleto')} Fund. incompleto\n${cb(gi, 'Fundamental completo')} Fund. completo   ${cb(gi, 'Médio incompleto')} Médio incompleto\n${cb(gi, 'Médio completo')} Médio completo   ${cb(gi, 'Superior incompleto')} Sup. incompleto\n${cb(gi, 'Superior completo')} Sup. completo   ${cb(gi, 'Pós-graduação')} Pós-graduação`, fontSize: 8 },
+            label('Curso / Formação'),
+            valb(d.curso)
+          ],
+          row2('Instituição de ensino', d.instituicao, 'Ano de conclusão', d.anoConclusao),
+          row2('Cursos / certificações', d.cursos, 'Idiomas', d.idiomas)
+        ]
+      },
+      layout: grayBorder
+    };
+
+    // ─────────────────────────────────────────────────────
+    // Section 9: DADOS PROFISSIONAIS (em branco - RH preenche)
+    // ─────────────────────────────────────────────────────
+    const dadosProf = t4([
+      row2('Cargo / função', '', 'CBO', ''),
+      row2('Setor / departamento', '', 'Data de admissão', ''),
+      row2('Salário base (R$)', '', 'Forma de pagamento', ''),
+      row2('Jornada / horário de trabalho', '', 'Tipo de contrato', ''),
+      row2('Período de experiência', '', 'Insalubridade / Periculosidade', ''),
+      row2('Superior imediato', '', 'Local de trabalho', '')
+    ]);
+
+    // ─────────────────────────────────────────────────────
+    // Section 10: VALE-TRANSPORTE
+    // ─────────────────────────────────────────────────────
+    const vt = {
+      table: {
+        widths: [140, '*'],
+        body: [[
+          label('Opta pelo vale-transporte?'),
+          { text: `${cb(d.vt, 'Sim')} Sim    ${cb(d.vt, 'Não')} Não`, fontSize: 10 }
+        ]]
+      },
+      layout: grayBorder
+    };
+
+    // ─────────────────────────────────────────────────────
+    // Section 12: SAÚDE
+    // ─────────────────────────────────────────────────────
+    const saudeRows = [
+      [label('Possui alergia a medicamento ou substância?'), { text: `${cb(d.alergia, 'Não')} Não   ${cb(d.alergia, 'Sim')} Sim — qual: ${val(d.alergiaQual)}`, fontSize: 9, colSpan: 3 }, {}, {}],
+      [label('Faz uso contínuo de medicamento?'), { text: `${cb(d.medcont, 'Não')} Não   ${cb(d.medcont, 'Sim')} Sim — qual: ${val(d.medContQual)}`, fontSize: 9, colSpan: 3 }, {}, {}],
+      [label('Possui restrição médica para alguma atividade?'), { text: `${cb(d.restr, 'Não')} Não   ${cb(d.restr, 'Sim')} Sim — qual: ${val(d.restrQual)}`, fontSize: 9, colSpan: 3 }, {}, {}],
+      [label('Já sofreu acidente de trabalho?'), { text: `${cb(d.acidente, 'Não')} Não   ${cb(d.acidente, 'Sim')} Sim — descreva: ${val(d.acidenteQual)}`, fontSize: 9, colSpan: 3 }, {}, {}],
+      row1('ASO admissional (data / médico)', '')
+    ];
+    const saude = { table: { widths: [160, '*', 90, '*'], body: saudeRows }, layout: grayBorder };
+
+    // ─────────────────────────────────────────────────────
+    // Section 13: CHECKLIST DE DOCUMENTOS (todos em branco)
+    // ─────────────────────────────────────────────────────
+    const docList = [
+      'CTPS digital (print do app)',
+      'RG e CPF (cópia)',
+      'Comprovante de endereço atualizado',
+      'Título de eleitor',
+      'Certificado de reservista (homens)',
+      'Certidão de nascimento / casamento',
+      'Certidão de nascimento e CPF dos dependentes',
+      'Comprovante de escolaridade',
+      '1 foto 3x4',
+      'CNH (se função exigir)',
+      'Certificado de MOPP (obrigatório para motoristas)',
+      'ASO admissional',
+      'Cartão de vacinação atualizado',
+      'Declaração de Etnia assinada (Lei 14.553/2023)'
+    ];
+    const checklistDocs = { ul: docList.map(t => ({ text: '☐  ' + t, fontSize: 9, margin: [0, 1, 0, 1] })), type: 'none', margin: [0, 4, 0, 0] };
+
+    // ─────────────────────────────────────────────────────
+    // Section 14: DECLARAÇÕES
+    // ─────────────────────────────────────────────────────
+    const declaracoes = [
+      '• Declaro que todas as informações prestadas nesta ficha são verdadeiras e me responsabilizo, civil e criminalmente, pela veracidade dos dados informados.',
+      '• Comprometo-me a comunicar formalmente ao RH qualquer alteração de endereço, estado civil, dependentes ou demais dados cadastrais.',
+      '• Autorizo a empresa a tratar meus dados pessoais para as finalidades de contratação, gestão do contrato de trabalho e cumprimento de obrigações legais, nos termos da Lei nº 13.709/2018 (LGPD).',
+      '• Declaro estar ciente de que o descumprimento de normas internas, do contrato de trabalho ou das normas de segurança do trabalho pode ensejar sanções disciplinares previstas em lei.'
+    ].map(t => ({ text: t, fontSize: 9, alignment: 'justify', margin: [0, 2, 0, 2] }));
+
+    // ─────────────────────────────────────────────────────
+    // Section 15: ASSINATURAS
+    // ─────────────────────────────────────────────────────
+    const assinaturas = {
+      columns: [
+        {
+          width: '*',
+          stack: [
+            sigFinal ? { image: sigFinal, width: 200, height: 60, margin: [0, 4, 0, 0] } : { text: ' ', margin: [0, 20, 0, 0] },
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 0.7 }] },
+            { text: 'Assinatura do funcionário (digital)', alignment: 'center', bold: true, fontSize: 9, margin: [0, 2, 0, 0] }
+          ]
+        },
+        { width: 20, text: '' },
+        {
+          width: '*',
+          stack: [
+            { text: ' ', margin: [0, 30, 0, 0] },
+            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 0.7 }] },
+            { text: 'Assinatura e carimbo do RH', alignment: 'center', bold: true, fontSize: 9, margin: [0, 2, 0, 0] }
+          ]
+        }
+      ],
+      margin: [0, 20, 0, 0]
+    };
+
+    // ─────────────────────────────────────────────────────
+    // Declaração de Etnia (página separada)
+    // ─────────────────────────────────────────────────────
+    const etniaOpt = d.etnia || '';
+    const etniaPage = [
+      { text: emp.nome, bold: true, alignment: 'center', fontSize: 13, pageBreak: 'before', margin: [0, 0, 0, 2] },
+      { text: 'CNPJ: ' + emp.cnpj, alignment: 'center', color: '#595959', fontSize: 9, margin: [0, 0, 0, 20] },
+      banner('DECLARAÇÃO DE ETNIA – Lei nº 14.553/2023'),
+      { text: 'Em atendimento à Lei nº 14.553, de 25 de abril de 2023, que determina a inclusão de informações étnico-raciais em registros de trabalhadores, bem como sua atualização no e-Social,', alignment: 'justify', fontSize: 10, margin: [0, 12, 0, 8] },
+      { text: [{ text: 'eu, ' }, { text: val(d.nomeCompleto).padEnd(80, ' '), decoration: 'underline' }, { text: ',' }], fontSize: 10, margin: [0, 4, 0, 4] },
+      { text: [{ text: 'inscrito(a) no CPF sob o nº ' }, { text: val(d.cpf).padEnd(30, ' '), decoration: 'underline' }, { text: ', abaixo assinado(a), me autodeclaro:' }], fontSize: 10, margin: [0, 0, 0, 16] },
+      // Opções de etnia (tabela)
+      {
+        table: {
+          widths: [30, 30, '*'],
+          body: [
+            [{ text: cb(etniaOpt, 'Branco(a)'), alignment: 'center', fontSize: 14 }, { text: '1', bold: true, alignment: 'center', fillColor: '#E7E6E6' }, { text: 'Branco(a)', fontSize: 10, margin: [8, 0, 0, 0] }],
+            [{ text: cb(etniaOpt, 'Preto(a)'), alignment: 'center', fontSize: 14 }, { text: '2', bold: true, alignment: 'center', fillColor: '#E7E6E6' }, { text: 'Preto(a)', fontSize: 10, margin: [8, 0, 0, 0] }],
+            [{ text: cb(etniaOpt, 'Pardo(a)'), alignment: 'center', fontSize: 14 }, { text: '3', bold: true, alignment: 'center', fillColor: '#E7E6E6' }, { text: 'Pardo(a)', fontSize: 10, margin: [8, 0, 0, 0] }],
+            [{ text: cb(etniaOpt, 'Amarelo(a)'), alignment: 'center', fontSize: 14 }, { text: '4', bold: true, alignment: 'center', fillColor: '#E7E6E6' }, { text: 'Amarelo(a)', fontSize: 10, margin: [8, 0, 0, 0] }],
+            [{ text: cb(etniaOpt, 'Indígena'), alignment: 'center', fontSize: 14 }, { text: '5', bold: true, alignment: 'center', fillColor: '#E7E6E6' }, { text: 'Indígena', fontSize: 10, margin: [8, 0, 0, 0] }]
+          ]
+        },
+        layout: grayBorder,
+        margin: [0, 0, 0, 20]
+      },
+      { text: [{ text: 'Declaro estar ciente de que, em caso de falsidade ideológica, conforme o ' }, { text: 'artigo 299 do Código Penal Brasileiro', bold: true }, { text: ', ficarei sujeito(a) às sanções legais aplicáveis.' }], alignment: 'justify', fontSize: 10, margin: [0, 0, 0, 30] },
+      { text: `Itaúna/MG, ${new Date().getDate().toString().padStart(2,'0')} de ${['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][new Date().getMonth()]} de ${new Date().getFullYear()}.`, fontSize: 10, margin: [0, 20, 0, 40] },
+      // Assinatura da declaração de etnia
+      sigEtnia
+        ? { image: sigEtnia, width: 240, height: 70, alignment: 'center' }
+        : { text: ' ', margin: [0, 40, 0, 0] },
+      { canvas: [{ type: 'line', x1: 100, y1: 0, x2: 400, y2: 0, lineWidth: 0.7 }] },
+      { text: 'Assinatura do(a) declarante', alignment: 'center', bold: true, fontSize: 10, margin: [0, 4, 0, 0] }
+    ];
+
+    // ─────────────────────────────────────────────────────
+    // MONTAR O DOCUMENTO
+    // ─────────────────────────────────────────────────────
+    const docDefinition = {
+      pageSize: 'LETTER',
+      pageMargins: [40, 55, 40, 40],
+      header: (currentPage, pageCount) => ({ text: emp.nome + ' — Ficha de Admissão', alignment: 'right', color: '#808080', fontSize: 8, margin: [40, 20, 40, 0] }),
+      footer: (currentPage, pageCount) => ({ text: `Página ${currentPage} de ${pageCount}`, alignment: 'center', color: '#808080', fontSize: 8, margin: [0, 10, 0, 0] }),
+      defaultStyle: { fontSize: 10 },
+      content: [
+        { text: 'FICHA DE ADMISSÃO – COLETA DE DADOS DO FUNCIONÁRIO', bold: true, fontSize: 13, alignment: 'center', margin: [0, 0, 0, 4] },
+        { text: 'Documento de uso interno do RH — todos os campos devem ser preenchidos pelo candidato e conferidos pelo RH.', italics: true, fontSize: 8, alignment: 'center', color: '#595959', margin: [0, 0, 0, 12] },
+
+        banner('1. IDENTIFICAÇÃO DA EMPRESA'),
+        t4([
+          row2('Empresa', emp.nome, 'CNPJ', emp.cnpj),
+          row2('Endereço', emp.endereco, 'CEP', emp.cep),
+          [label('Cidade/UF'), { text: emp.cidadeUF, bold: true, fontSize: 10, colSpan: 3 }, {}, {}]
+        ]),
+
+        banner('2. DADOS PESSOAIS'),
+        dadosPessoais,
+
+        banner('3. FILIAÇÃO'),
+        t4([
+          [label('Nome do pai'), { text: val(d.nomePai), colSpan: 3, bold: true, fontSize: 10 }, {}, {}],
+          [label('Nome da mãe'), { text: val(d.nomeMae), colSpan: 3, bold: true, fontSize: 10 }, {}, {}]
+        ]),
+
+        banner('4. ENDEREÇO E CONTATO'),
+        {
+          table: {
+            widths: [90, '*', 90, '*'],
+            body: [
+              [label('Endereço (rua, nº, complemento)'), { text: val(d.endereco), colSpan: 3, bold: true, fontSize: 10 }, {}, {}]
+            ]
+          },
+          layout: grayBorder
+        },
+        {
+          table: {
+            widths: [55, 130, 55, '*', 30, 60],
+            body: [[
+              label('Bairro'), valb(d.bairro),
+              label('Cidade'), valb(d.cidade),
+              label('UF'), valb(d.uf)
+            ]]
+          },
+          layout: grayBorder
+        },
+        t4([
+          row2('CEP', d.cep, 'Telefone celular', d.celular),
+          row2('Telefone recado', d.recado, 'E-mail pessoal', d.email),
+          row2('Tem WhatsApp?', `${cb(d.whats,'Sim')} Sim   ${cb(d.whats,'Outro')} Outro   ${cb(d.whats,'Não')} Não`, 'Nº WhatsApp (se diferente)', d.whatsOutro)
+        ]),
+
+        banner('5. DOCUMENTAÇÃO'),
+        t4([
+          row2('CPF', d.cpf, 'RG / nº', d.rg),
+          row2('RG — órgão emissor / UF', d.rgOrgao, 'RG — data de emissão', fmtDate(d.rgData)),
+          row2('CTPS — nº / série', d.ctpsNumero, 'CTPS — UF / data de emissão', d.ctpsData),
+          row2('PIS / PASEP / NIT', d.pis, 'Título de eleitor', d.titulo),
+          row2('Zona / Seção eleitoral', d.zonaSecao, 'Reservista (se aplicável)', d.reservista),
+          row2('CNH — nº', d.cnhNumero, 'CNH — categoria', d.cnhCategoria),
+          row2('CNH — validade', fmtDate(d.cnhValidade), 'CNH — 1ª habilitação', fmtDate(d.cnhPrimeira))
+        ]),
+
+        banner('6. CÔNJUGE / COMPANHEIRO(A) (se houver)'),
+        t4([
+          [label('Nome completo'), { text: val(d.conjugeNome), colSpan: 3, bold: true, fontSize: 10 }, {}, {}],
+          row2('CPF', d.conjugeCpf, 'Data de nascimento', fmtDate(d.conjugeNasc)),
+          row2('Trabalha?', d.conjTrab, 'Empresa onde trabalha', d.conjugeEmpresa)
+        ]),
+
+        banner('7. DEPENDENTES (para IRRF, salário-família e plano de saúde)'),
+        { text: 'Marque com ☒ a finalidade da dependência. Anexar certidão de nascimento / CPF dos dependentes.', italics: true, color: '#595959', fontSize: 8, margin: [0, 0, 0, 4] },
+        dependentesTable,
+
+        banner('8. ESCOLARIDADE E QUALIFICAÇÃO'),
+        escolaridade,
+
+        banner('9. DADOS PROFISSIONAIS (preenchimento do RH)'),
+        dadosProf,
+
+        banner('10. VALE-TRANSPORTE'),
+        vt,
+
+        banner('11. CONTATO EM CASO DE EMERGÊNCIA'),
+        t4([
+          row2('Nome', d.emerNome, 'Parentesco', d.emerParentesco),
+          row2('Telefone', d.emerTelefone, 'Telefone alternativo', d.emerTelefone2)
+        ]),
+
+        banner('12. INFORMAÇÕES DE SAÚDE / SEGURANÇA DO TRABALHO'),
+        saude,
+
+        banner('13. DOCUMENTOS ENTREGUES AO RH (conferência)'),
+        checklistDocs,
+
+        banner('14. DECLARAÇÕES DO FUNCIONÁRIO'),
+        ...declaracoes,
+
+        banner('15. ASSINATURAS'),
+        { text: 'Local e data: ______________________________________________, ______ / ______ / __________', fontSize: 10, margin: [0, 15, 0, 0] },
+        assinaturas,
+
+        // Declaração de Etnia (nova página)
+        ...etniaPage
+      ]
+    };
+
+    // Gerar PDF
+    const filename = `Admissao_${(d.nomeCompleto || 'ficha').replace(/[^a-zA-Z0-9]/g, '_')}_${(ficha.empresa || 'agas').toUpperCase()}.pdf`;
+    pdfMake.createPdf(docDefinition).download(filename);
   }
 
   document.getElementById('btn-copiar-link').addEventListener('click', () => {
