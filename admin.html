@@ -240,29 +240,13 @@
           <input type="text" id="emp-cargo" placeholder="Conforme ASO">
         </div>
         <div class="field">
-          <label>CBO</label>
-          <input type="text" id="emp-cbo">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="field">
           <label>Setor / Departamento</label>
           <input type="text" id="emp-departamento">
         </div>
-        <div class="field">
-          <label>Salário base (R$) *</label>
-          <input type="text" id="emp-salario" placeholder="Ex: 1.760,25">
-        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="field">
-          <label>Forma de pagamento</label>
-          <input type="text" id="emp-formaPgto" placeholder="Ex: Depósito em conta">
-        </div>
-        <div class="field">
-          <label>Tipo de contrato</label>
-          <input type="text" id="emp-tipoContrato" placeholder="Ex: CLT">
-        </div>
+      <div class="field">
+        <label>Salário base (R$) *</label>
+        <input type="text" id="emp-salario" placeholder="Ex: 1.760,25">
       </div>
       <div class="field">
         <label>Horário de trabalho *</label>
@@ -270,17 +254,29 @@
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="field">
-          <label>Insalubridade / Periculosidade</label>
-          <input type="text" id="emp-insalubridade" placeholder="Ex: Não / 30% periculosidade">
+          <label>Periculosidade?</label>
+          <div style="display:flex;gap:12px;margin-top:6px">
+            <label style="font-size:14px"><input type="radio" name="emp-pericul" value="Não" id="emp-periculNao" style="margin-right:4px" checked> Não</label>
+            <label style="font-size:14px"><input type="radio" name="emp-pericul" value="Sim" id="emp-periculSim" style="margin-right:4px"> Sim</label>
+          </div>
         </div>
+        <div class="field">
+          <label>Insalubridade?</label>
+          <div style="display:flex;gap:12px;margin-top:6px">
+            <label style="font-size:14px"><input type="radio" name="emp-insalub" value="Não" id="emp-insalubNao" style="margin-right:4px" checked> Não</label>
+            <label style="font-size:14px"><input type="radio" name="emp-insalub" value="Sim" id="emp-insalubSim" style="margin-right:4px"> Sim</label>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="field">
           <label>Superior imediato</label>
           <input type="text" id="emp-superior">
         </div>
-      </div>
-      <div class="field">
-        <label>Local de trabalho</label>
-        <input type="text" id="emp-local" placeholder="Ex: Sede — Av. São João, 4613">
+        <div class="field">
+          <label>Local de trabalho</label>
+          <input type="text" id="emp-local" placeholder="Ex: Sede — Av. São João, 4613">
+        </div>
       </div>
 
       <div style="background:var(--gray-100);border-radius:6px;padding:14px;margin:16px 0">
@@ -689,13 +685,13 @@
     const de = currentDetail.dadosEmpresa || {};
     document.getElementById('emp-dataAdmissao').value = de.dataAdmissao || '';
     document.getElementById('emp-cargo').value = de.cargo || '';
-    document.getElementById('emp-cbo').value = de.cbo || '';
     document.getElementById('emp-departamento').value = de.departamento || '';
     document.getElementById('emp-salario').value = de.salario || '';
-    document.getElementById('emp-formaPgto').value = de.formaPgto || '';
-    document.getElementById('emp-tipoContrato').value = de.tipoContrato || '';
     document.getElementById('emp-horario').value = de.horario || '';
-    document.getElementById('emp-insalubridade').value = de.insalubridade || '';
+    const periculRadio = document.querySelector(`input[name="emp-pericul"][value="${de.periculosidade || 'Não'}"]`);
+    if (periculRadio) periculRadio.checked = true;
+    const insalubRadio = document.querySelector(`input[name="emp-insalub"][value="${de.insalubridade || 'Não'}"]`);
+    if (insalubRadio) insalubRadio.checked = true;
     document.getElementById('emp-superior').value = de.superior || '';
     document.getElementById('emp-local').value = de.local || '';
     document.getElementById('emp-descVT').checked = de.descVT || false;
@@ -715,13 +711,11 @@
     return {
       dataAdmissao: document.getElementById('emp-dataAdmissao').value,
       cargo: document.getElementById('emp-cargo').value,
-      cbo: document.getElementById('emp-cbo').value,
       departamento: document.getElementById('emp-departamento').value,
       salario: document.getElementById('emp-salario').value,
-      formaPgto: document.getElementById('emp-formaPgto').value,
-      tipoContrato: document.getElementById('emp-tipoContrato').value,
       horario: document.getElementById('emp-horario').value,
-      insalubridade: document.getElementById('emp-insalubridade').value,
+      periculosidade: document.querySelector('input[name="emp-pericul"]:checked')?.value || 'Não',
+      insalubridade: document.querySelector('input[name="emp-insalub"]:checked')?.value || 'Não',
       superior: document.getElementById('emp-superior').value,
       local: document.getElementById('emp-local').value,
       descVT: document.getElementById('emp-descVT').checked,
@@ -893,11 +887,10 @@
     // ─────────────────────────────────────────────────────
     const de = ficha.dadosEmpresa || {};
     const dadosProf = t4([
-      row2('Cargo / função', de.cargo, 'CBO', de.cbo),
-      row2('Setor / departamento', de.departamento, 'Data de admissão', fmtDate(de.dataAdmissao)),
-      row2('Salário base (R$)', de.salario, 'Forma de pagamento', de.formaPgto),
-      row2('Jornada / horário de trabalho', de.horario, 'Tipo de contrato', de.tipoContrato),
-      row2('Período de experiência', (de.experiencia === 'Sim' ? de.expDias + ' dias' : 'Não'), 'Insalubridade / Periculosidade', de.insalubridade),
+      row2('Cargo / função', de.cargo, 'Setor / departamento', de.departamento),
+      row2('Data de admissão', fmtDate(de.dataAdmissao), 'Salário base (R$)', de.salario),
+      row2('Jornada / horário de trabalho', de.horario, 'Período de experiência', (de.experiencia === 'Sim' ? de.expDias + ' dias' : 'Não')),
+      row2('Periculosidade', de.periculosidade, 'Insalubridade', de.insalubridade),
       row2('Superior imediato', de.superior, 'Local de trabalho', de.local)
     ]);
 
@@ -1119,7 +1112,9 @@
             body: [
               [label('*Data de admissão'), valb(fmtDate(de.dataAdmissao)), label('Função'), { text: val(de.cargo) + ' (conforme ASO)', fontSize: 9 }],
               [label('Departamento'), valb(de.departamento), label('*Salário'), valb('R$ ' + (de.salario || ''))],
-              [{ text: '*Horário de trabalho:', ...label('*Horário'), colSpan: 1 }, { text: val(de.horario), bold: true, fontSize: 9, colSpan: 3 }, {}, {}]
+              [{ text: '*Horário de trabalho:', ...label('*Horário'), colSpan: 1 }, { text: val(de.horario), bold: true, fontSize: 9, colSpan: 3 }, {}, {}],
+              [label('Periculosidade'), { text: `${de.periculosidade === 'Sim' ? '(X) Sim' : '(  ) Sim'}  ${de.periculosidade === 'Não' ? '(X) Não' : '(  ) Não'}`, fontSize: 9 },
+               label('Insalubridade'), { text: `${de.insalubridade === 'Sim' ? '(X) Sim' : '(  ) Sim'}  ${de.insalubridade === 'Não' ? '(X) Não' : '(  ) Não'}`, fontSize: 9 }]
             ]
           },
           layout: grayBorder
