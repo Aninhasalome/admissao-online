@@ -220,6 +220,114 @@
   </div>
 </div>
 
+<!-- ═══ MODAL: Dados da Empresa (antes de gerar PDF) ═══ -->
+<div class="modal-overlay" id="modal-empresa">
+  <div class="modal">
+    <div class="modal-header" style="background: var(--primary); color: white;">
+      <h2 style="color:white">📋 Dados da Admissão (uso da empresa)</h2>
+      <button class="modal-close" data-close style="color:white">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--gray-500);margin-top:0">Preencha os dados antes de gerar o PDF. Esses campos serão salvos junto à ficha.</p>
+
+      <div class="field">
+        <label>Data de admissão *</label>
+        <input type="date" id="emp-dataAdmissao">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label>Cargo / Função *</label>
+          <input type="text" id="emp-cargo" placeholder="Conforme ASO">
+        </div>
+        <div class="field">
+          <label>CBO</label>
+          <input type="text" id="emp-cbo">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label>Setor / Departamento</label>
+          <input type="text" id="emp-departamento">
+        </div>
+        <div class="field">
+          <label>Salário base (R$) *</label>
+          <input type="text" id="emp-salario" placeholder="Ex: 1.760,25">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label>Forma de pagamento</label>
+          <input type="text" id="emp-formaPgto" placeholder="Ex: Depósito em conta">
+        </div>
+        <div class="field">
+          <label>Tipo de contrato</label>
+          <input type="text" id="emp-tipoContrato" placeholder="Ex: CLT">
+        </div>
+      </div>
+      <div class="field">
+        <label>Horário de trabalho *</label>
+        <input type="text" id="emp-horario" placeholder="Ex: SEG a SEX 12:00 às 21:48 com 1:00 de intervalo">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label>Insalubridade / Periculosidade</label>
+          <input type="text" id="emp-insalubridade" placeholder="Ex: Não / 30% periculosidade">
+        </div>
+        <div class="field">
+          <label>Superior imediato</label>
+          <input type="text" id="emp-superior">
+        </div>
+      </div>
+      <div class="field">
+        <label>Local de trabalho</label>
+        <input type="text" id="emp-local" placeholder="Ex: Sede — Av. São João, 4613">
+      </div>
+
+      <div style="background:var(--gray-100);border-radius:6px;padding:14px;margin:16px 0">
+        <label style="font-weight:700;font-size:13px;color:var(--gray-700);display:block;margin-bottom:10px">Descontos</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:14px"><input type="checkbox" id="emp-descVT" style="margin-right:6px"> Vale-transporte</label>
+          <label style="font-size:14px"><input type="checkbox" id="emp-descOutro1Check" style="margin-right:6px"> Outro: <input type="text" id="emp-descOutro1" style="width:180px;padding:4px 8px;border:1px solid var(--gray-300);border-radius:4px;font-size:14px"></label>
+        </div>
+      </div>
+
+      <div style="background:var(--gray-100);border-radius:6px;padding:14px;margin:16px 0">
+        <label style="font-weight:700;font-size:13px;color:var(--gray-700);display:block;margin-bottom:10px">Proventos</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:14px"><input type="checkbox" id="emp-provNoturno" style="margin-right:6px"> Adicional noturno</label>
+          <label style="font-size:14px"><input type="checkbox" id="emp-provOutro1Check" style="margin-right:6px"> Outro: <input type="text" id="emp-provOutro1" style="width:180px;padding:4px 8px;border:1px solid var(--gray-300);border-radius:4px;font-size:14px"></label>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin:16px 0">
+        <label style="font-weight:600;font-size:14px">Contrato de experiência?</label>
+        <div style="display:flex;gap:12px;align-items:center">
+          <label style="font-size:14px"><input type="radio" name="emp-exp" value="Sim" id="emp-expSim" style="margin-right:4px" checked> Sim</label>
+          <label style="font-size:14px"><input type="radio" name="emp-exp" value="Não" id="emp-expNao" style="margin-right:4px"> Não</label>
+          <span style="font-size:13px;color:var(--gray-500)">Dias:</span>
+          <select id="emp-expDias" style="padding:6px 10px;border:1px solid var(--gray-300);border-radius:4px;font-size:14px">
+            <option value="45">45</option>
+            <option value="30">30</option>
+            <option value="60">60</option>
+            <option value="45 ou 90">45 ou 90</option>
+            <option value="30 ou 60">30 ou 60</option>
+            <option value="90">90</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Outras informações</label>
+        <textarea id="emp-outras" rows="3" style="width:100%;padding:10px;border:1.5px solid var(--gray-300);border-radius:6px;font-family:inherit;font-size:14px" placeholder="Observações adicionais..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close>Cancelar</button>
+      <button class="btn btn-primary" id="btn-gerar-pdf-final">📥 Gerar PDF completo</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   // ═══════════════════════════════════════════════════════════════════
   //  CONFIGURAÇÃO — Ana Paula, MESMOS dados que você colocou no index.html
@@ -573,9 +681,72 @@
   // ═══════════════════════════════════════════════════════════════════
   //  GERAÇÃO DE PDF (padrão idêntico à ficha impressa)
   // ═══════════════════════════════════════════════════════════════════
+  const modalEmpresa = document.getElementById('modal-empresa');
+
   document.getElementById('btn-baixar-pdf').addEventListener('click', () => {
     if (!currentDetail) return;
+    // Preenche o modal com dados já salvos (se houver)
+    const de = currentDetail.dadosEmpresa || {};
+    document.getElementById('emp-dataAdmissao').value = de.dataAdmissao || '';
+    document.getElementById('emp-cargo').value = de.cargo || '';
+    document.getElementById('emp-cbo').value = de.cbo || '';
+    document.getElementById('emp-departamento').value = de.departamento || '';
+    document.getElementById('emp-salario').value = de.salario || '';
+    document.getElementById('emp-formaPgto').value = de.formaPgto || '';
+    document.getElementById('emp-tipoContrato').value = de.tipoContrato || '';
+    document.getElementById('emp-horario').value = de.horario || '';
+    document.getElementById('emp-insalubridade').value = de.insalubridade || '';
+    document.getElementById('emp-superior').value = de.superior || '';
+    document.getElementById('emp-local').value = de.local || '';
+    document.getElementById('emp-descVT').checked = de.descVT || false;
+    document.getElementById('emp-descOutro1Check').checked = de.descOutro1Check || false;
+    document.getElementById('emp-descOutro1').value = de.descOutro1 || '';
+    document.getElementById('emp-provNoturno').checked = de.provNoturno || false;
+    document.getElementById('emp-provOutro1Check').checked = de.provOutro1Check || false;
+    document.getElementById('emp-provOutro1').value = de.provOutro1 || '';
+    const expRadio = document.querySelector(`input[name="emp-exp"][value="${de.experiencia || 'Sim'}"]`);
+    if (expRadio) expRadio.checked = true;
+    document.getElementById('emp-expDias').value = de.expDias || '45';
+    document.getElementById('emp-outras').value = de.outras || '';
+    modalEmpresa.classList.add('show');
+  });
+
+  function collectDadosEmpresa() {
+    return {
+      dataAdmissao: document.getElementById('emp-dataAdmissao').value,
+      cargo: document.getElementById('emp-cargo').value,
+      cbo: document.getElementById('emp-cbo').value,
+      departamento: document.getElementById('emp-departamento').value,
+      salario: document.getElementById('emp-salario').value,
+      formaPgto: document.getElementById('emp-formaPgto').value,
+      tipoContrato: document.getElementById('emp-tipoContrato').value,
+      horario: document.getElementById('emp-horario').value,
+      insalubridade: document.getElementById('emp-insalubridade').value,
+      superior: document.getElementById('emp-superior').value,
+      local: document.getElementById('emp-local').value,
+      descVT: document.getElementById('emp-descVT').checked,
+      descOutro1Check: document.getElementById('emp-descOutro1Check').checked,
+      descOutro1: document.getElementById('emp-descOutro1').value,
+      provNoturno: document.getElementById('emp-provNoturno').checked,
+      provOutro1Check: document.getElementById('emp-provOutro1Check').checked,
+      provOutro1: document.getElementById('emp-provOutro1').value,
+      experiencia: document.querySelector('input[name="emp-exp"]:checked')?.value || 'Sim',
+      expDias: document.getElementById('emp-expDias').value,
+      outras: document.getElementById('emp-outras').value
+    };
+  }
+
+  document.getElementById('btn-gerar-pdf-final').addEventListener('click', async () => {
+    const dadosEmpresa = collectDadosEmpresa();
+    // Salva os dados da empresa no Firestore (pra não perder)
+    if (USE_FIREBASE && currentDetail) {
+      try {
+        await fs.updateDoc(fs.doc(db, 'fichas', currentDetail.id), { dadosEmpresa });
+      } catch(e) { console.warn('Erro ao salvar dados empresa:', e); }
+    }
+    currentDetail.dadosEmpresa = dadosEmpresa;
     generatePDF(currentDetail);
+    modalEmpresa.classList.remove('show');
   });
 
   function generatePDF(ficha) {
@@ -718,15 +889,16 @@
     };
 
     // ─────────────────────────────────────────────────────
-    // Section 9: DADOS PROFISSIONAIS (em branco - RH preenche)
+    // Section 9: DADOS PROFISSIONAIS (preenchido pelo RH)
     // ─────────────────────────────────────────────────────
+    const de = ficha.dadosEmpresa || {};
     const dadosProf = t4([
-      row2('Cargo / função', '', 'CBO', ''),
-      row2('Setor / departamento', '', 'Data de admissão', ''),
-      row2('Salário base (R$)', '', 'Forma de pagamento', ''),
-      row2('Jornada / horário de trabalho', '', 'Tipo de contrato', ''),
-      row2('Período de experiência', '', 'Insalubridade / Periculosidade', ''),
-      row2('Superior imediato', '', 'Local de trabalho', '')
+      row2('Cargo / função', de.cargo, 'CBO', de.cbo),
+      row2('Setor / departamento', de.departamento, 'Data de admissão', fmtDate(de.dataAdmissao)),
+      row2('Salário base (R$)', de.salario, 'Forma de pagamento', de.formaPgto),
+      row2('Jornada / horário de trabalho', de.horario, 'Tipo de contrato', de.tipoContrato),
+      row2('Período de experiência', (de.experiencia === 'Sim' ? de.expDias + ' dias' : 'Não'), 'Insalubridade / Periculosidade', de.insalubridade),
+      row2('Superior imediato', de.superior, 'Local de trabalho', de.local)
     ]);
 
     // ─────────────────────────────────────────────────────
@@ -931,6 +1103,48 @@
 
         banner('9. DADOS PROFISSIONAIS (preenchimento do RH)'),
         dadosProf,
+
+        // Bloco extra: PARA USO DA EMPRESA
+        {
+          table: {
+            widths: ['*'],
+            body: [[{ text: 'PARA USO DA EMPRESA', bold: true, fontSize: 10, alignment: 'center', fillColor: '#1A1A1A', color: 'white', margin: [0, 3, 0, 3] }]]
+          },
+          layout: noBorder,
+          margin: [0, 10, 0, 3]
+        },
+        {
+          table: {
+            widths: [160, '*', 160, '*'],
+            body: [
+              [label('*Data de admissão'), valb(fmtDate(de.dataAdmissao)), label('Função'), { text: val(de.cargo) + ' (conforme ASO)', fontSize: 9 }],
+              [label('Departamento'), valb(de.departamento), label('*Salário'), valb('R$ ' + (de.salario || ''))],
+              [{ text: '*Horário de trabalho:', ...label('*Horário'), colSpan: 1 }, { text: val(de.horario), bold: true, fontSize: 9, colSpan: 3 }, {}, {}]
+            ]
+          },
+          layout: grayBorder
+        },
+        {
+          table: {
+            widths: ['*', '*'],
+            body: [[
+              { text: `*Descontos:\n    ${de.descVT ? '(X)' : '(  )'} Vale-transporte\n    ${de.descOutro1Check ? '(X) ' + val(de.descOutro1) : '(  ) ___________________'}`, fontSize: 9, lineHeight: 1.4 },
+              { text: `*Proventos:\n    ${de.provNoturno ? '(X)' : '(  )'} Adicional noturno\n    ${de.provOutro1Check ? '(X) ' + val(de.provOutro1) : '(  ) ___________________'}`, fontSize: 9, lineHeight: 1.4 }
+            ]]
+          },
+          layout: grayBorder
+        },
+        {
+          table: {
+            widths: ['*'],
+            body: [[{
+              text: `*Funcionário com Contrato de experiência: ${de.experiencia === 'Sim' ? '(X) Sim' : '(  ) Sim'}    ${de.experiencia === 'Não' ? '(X) Não' : '(  ) Não'}    *Quantos dias: ${de.experiencia === 'Sim' ? (de.expDias || '45') : '___'}    30, 60, 45 ou 90`,
+              fontSize: 9
+            }]]
+          },
+          layout: grayBorder
+        },
+        de.outras ? { text: 'Outras informações: ' + de.outras, fontSize: 9, margin: [0, 4, 0, 0] } : { text: '', margin: [0, 0, 0, 0] },
 
         banner('10. VALE-TRANSPORTE'),
         vt,
